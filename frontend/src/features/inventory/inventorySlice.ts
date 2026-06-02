@@ -34,6 +34,13 @@ export const fetchCategories = createAsyncThunk(
   }
 );
 
+export const createCategory = createAsyncThunk(
+  'inventory/createCategory',
+  async (name: string) => {
+    return await categoryApi.createCategory(name);
+  }
+);
+
 export const addProduct = createAsyncThunk(
   'inventory/addProduct',
   async (product: api.CreateProductRequest) => {
@@ -83,6 +90,9 @@ const inventorySlice = createSlice({
       })
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.categories = action.payload;
+      })
+      .addCase(createCategory.fulfilled, (state, action) => {
+        state.categories.push(action.payload);
       })
       .addCase(addProduct.pending, (state) => {
         state.loading = true;

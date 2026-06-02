@@ -6,7 +6,7 @@ interface TenantState {
 }
 
 const getInitialTenantId = (): string | null => {
-  return localStorage.getItem('activeTenantId');
+  return localStorage.getItem('activeTenantId') || 'tenant1';
 };
 
 const initialState: TenantState = {

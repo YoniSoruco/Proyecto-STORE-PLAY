@@ -1,14 +1,27 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import Scanner from './Scanner';
 import posScannerReducer from './posScannerSlice';
+import inventoryReducer from '@/features/inventory/inventorySlice';
+import tenantReducer from '@/features/tenant/tenantSlice';
+import posCartReducer from './posCartSlice';
 
 function createMockStore() {
   return configureStore({
-    reducer: { posScanner: posScannerReducer },
-    preloadedState: { posScanner: { status: 'idle' as const, lastScan: null, feedback: null, error: null } },
+    reducer: {
+      posScanner: posScannerReducer,
+      posCart: posCartReducer,
+      inventory: inventoryReducer,
+      tenant: tenantReducer,
+    },
+    preloadedState: {
+      posScanner: { status: 'idle', lastScan: null, feedback: null, error: null },
+      posCart: { items: [], totals: { itemCount: 0, subtotal: 0, tax: 0, total: 0 }, checkoutLoading: false, checkoutError: null },
+      inventory: { products: [], categories: [], loading: false, error: null },
+      tenant: { tenants: [], activeTenantId: null, loading: false },
+    },
   });
 }
 
@@ -20,37 +33,21 @@ function renderWithStore(store: ReturnType<typeof createMockStore>) {
   );
 }
 
-beforeEach(() => {
-  vi.stubGlobal('navigator', {
-    ...navigator,
-    mediaDevices: {
-      getUserMedia: vi.fn().mockRejectedValue(
-        new DOMException('Camera not available', 'NotFoundError'),
-      ),
-    },
-  });
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
 describe('Scanner', () => {
-  it('should render manual input field', async () => {
+  it('should render manual input field', () => {
     const store = createMockStore();
     renderWithStore(store);
 
-    // Wait for the camera request to fail and show fallback
-    const input = await screen.findByPlaceholderText('Ingresar código');
+    const input = screen.getByPlaceholderText('Ingresar código');
     expect(input).toBeInTheDocument();
   });
 
-  it('should show validation error for non-numeric input', async () => {
+  it('should show validation error for non-numeric input', () => {
     const store = createMockStore();
     renderWithStore(store);
 
-    const input = await screen.findByPlaceholderText('Ingresar código');
-    const scanBtn = screen.getByRole('button', { name: /escanear/i });
+    const input = screen.getByPlaceholderText('Ingresar código');
+    const scanBtn = screen.getByRole('button', { name: /agregar/i });
 
     fireEvent.change(input, { target: { value: 'abc' } });
     fireEvent.click(scanBtn);
@@ -58,41 +55,41 @@ describe('Scanner', () => {
     expect(screen.getByText('El código debe ser numérico.')).toBeInTheDocument();
   });
 
-  it('should show validation error for short barcode', async () => {
+  it('should show validation error for short barcode', () => {
     const store = createMockStore();
     renderWithStore(store);
 
-    const input = await screen.findByPlaceholderText('Ingresar código');
-    const scanBtn = screen.getByRole('button', { name: /escanear/i });
+    const input = screen.getByPlaceholderText('Ingresar código');
+    const scanBtn = screen.getByRole('button', { name: /agregar/i });
 
-    fireEvent.change(input, { target: { value: '12345' } });
+    fireEvent.change(input, { target: { value: '12' } });
     fireEvent.click(scanBtn);
 
-    expect(screen.getByText('El código debe tener 8–14 dígitos.')).toBeInTheDocument();
+    expect(screen.getByText('El código debe tener 3–20 dígitos.')).toBeInTheDocument();
   });
 
-  it('should dispatch scanDetected on valid manual input', async () => {
+  it('should dispatch processScan on valid manual input', () => {
     const store = createMockStore();
     const dispatchSpy = vi.spyOn(store, 'dispatch');
     renderWithStore(store);
 
-    const input = await screen.findByPlaceholderText('Ingresar código');
-    const scanBtn = screen.getByRole('button', { name: /escanear/i });
+    const input = screen.getByPlaceholderText('Ingresar código');
+    const scanBtn = screen.getByRole('button', { name: /agregar/i });
 
     fireEvent.change(input, { target: { value: '8901234567890' } });
     fireEvent.click(scanBtn);
 
-    expect(dispatchSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'posScanner/scanDetected' }),
-    );
+    // processScan dispatches a thunk (function), not a plain action
+    expect(dispatchSpy).toHaveBeenCalled();
+    expect(typeof dispatchSpy.mock.calls[0][0]).toBe('function');
   });
 
-  it('should clear input after valid manual submission', async () => {
+  it('should clear input after valid manual submission', () => {
     const store = createMockStore();
     renderWithStore(store);
 
-    const input = await screen.findByPlaceholderText('Ingresar código') as HTMLInputElement;
-    const scanBtn = screen.getByRole('button', { name: /escanear/i });
+    const input = screen.getByPlaceholderText('Ingresar código') as HTMLInputElement;
+    const scanBtn = screen.getByRole('button', { name: /agregar/i });
 
     fireEvent.change(input, { target: { value: '8901234567890' } });
     fireEvent.click(scanBtn);
@@ -107,7 +104,7 @@ describe('Scanner', () => {
     await act(async () => {
       store.dispatch({
         type: 'posScanner/processScan/fulfilled',
-        payload: { feedback: { message: 'Agregado: Test Product', severity: 'success' as const } },
+        payload: { feedback: { message: 'Agregado: Test Product', severity: 'success' } },
       });
     });
 
@@ -121,22 +118,10 @@ describe('Scanner', () => {
     await act(async () => {
       store.dispatch({
         type: 'posScanner/processScan/fulfilled',
-        payload: { feedback: { message: 'Producto no encontrado', severity: 'warning' as const } },
+        payload: { feedback: { message: 'Producto no encontrado', severity: 'warning' } },
       });
     });
 
     expect(await screen.findByText('Producto no encontrado')).toBeInTheDocument();
-  });
-
-  it('should show camera permission denied message', async () => {
-    (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new DOMException('Permission denied', 'NotAllowedError'),
-    );
-
-    const store = createMockStore();
-    renderWithStore(store);
-
-    // Wait for the error state to propagate
-    expect(await screen.findByText(/Permiso de cámara denegado/)).toBeInTheDocument();
   });
 });

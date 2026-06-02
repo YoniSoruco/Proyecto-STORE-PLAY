@@ -10,6 +10,8 @@ describe('posCartSlice', () => {
   const initialState: PosCartState = {
     items: [],
     totals: { itemCount: 0, subtotal: 0, tax: 0, total: 0 },
+    checkoutLoading: false,
+    checkoutError: null,
   };
 
   it('should return the initial state', () => {

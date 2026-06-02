@@ -97,27 +97,53 @@ describe('posScannerSlice', () => {
   });
 
   describe('processScan', () => {
-    it('should set success feedback when product is found', async () => {
-      const { getProductByBarcode } = await import('@/api/products');
-      vi.mocked(getProductByBarcode).mockResolvedValue({
-        id: 1, name: 'Test Product', price: 10, barcode: '8901234567890',
-        brand: null, description: null, costPrice: null,
-        stock: 0, minStock: 0, saleUnit: 'unit', active: true,
-        categoryId: null, categoryName: null,
-      });
+    const foundProduct = { id: 1, name: 'Test Product', price: 10, barcode: '8901234567890',
+      brand: null, description: null, costPrice: null,
+      stock: 0, minStock: 0, saleUnit: 'unit', active: true,
+      categoryId: null, categoryName: null };
 
-      const store = configureStore({ reducer: { posScanner: posScannerReducer } });
+    it('should find product in local inventory state first', async () => {
+      const store = configureStore({
+        reducer: {
+          posScanner: posScannerReducer,
+          inventory: () => ({ products: [foundProduct], categories: [], loading: false, error: null, searchResult: null }),
+          posCart: (s = { items: [], totals: { itemCount: 0, subtotal: 0, tax: 0, total: 0 } }) => s,
+        },
+      });
       await store.dispatch(processScan({ barcode: '8901234567890', source: 'manual' }));
 
       const state = store.getState().posScanner;
       expect(state.feedback).toEqual({ message: 'Agregado: Test Product', severity: 'success' });
     });
 
-    it('should set warning feedback when product is not found', async () => {
+    it('should fall back to API call when product not in local state', async () => {
+      const { getProductByBarcode } = await import('@/api/products');
+      vi.mocked(getProductByBarcode).mockResolvedValue(foundProduct);
+
+      const store = configureStore({
+        reducer: {
+          posScanner: posScannerReducer,
+          inventory: () => ({ products: [], categories: [], loading: false, error: null, searchResult: null }),
+          posCart: (s = { items: [], totals: { itemCount: 0, subtotal: 0, tax: 0, total: 0 } }) => s,
+        },
+      });
+      await store.dispatch(processScan({ barcode: '8901234567890', source: 'manual' }));
+
+      const state = store.getState().posScanner;
+      expect(state.feedback).toEqual({ message: 'Agregado: Test Product', severity: 'success' });
+    });
+
+    it('should set warning feedback when product is not found anywhere', async () => {
       const { getProductByBarcode } = await import('@/api/products');
       vi.mocked(getProductByBarcode).mockRejectedValue(new Error('Not found'));
 
-      const store = configureStore({ reducer: { posScanner: posScannerReducer } });
+      const store = configureStore({
+        reducer: {
+          posScanner: posScannerReducer,
+          inventory: () => ({ products: [], categories: [], loading: false, error: null, searchResult: null }),
+          posCart: (s = { items: [], totals: { itemCount: 0, subtotal: 0, tax: 0, total: 0 } }) => s,
+        },
+      });
       await store.dispatch(processScan({ barcode: '0000000000000', source: 'manual' }));
 
       const state = store.getState().posScanner;

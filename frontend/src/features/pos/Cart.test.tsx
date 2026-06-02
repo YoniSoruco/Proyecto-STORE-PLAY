@@ -1,23 +1,23 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { createStore, combineReducers } from 'redux';
+import { configureStore } from '@reduxjs/toolkit';
 import Cart from './Cart';
 import posCartReducer, { type PosCartState } from './posCartSlice';
 
 const defaultPosCart: PosCartState = {
   items: [],
   totals: { itemCount: 0, subtotal: 0, tax: 0, total: 0 },
+  checkoutLoading: false,
+  checkoutError: null,
 };
 
-interface RootState { posCart: PosCartState; }
-
-const rootReducer = combineReducers({ posCart: posCartReducer });
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createMockStore(preloaded?: Partial<RootState>): any {
-  const state: RootState = { posCart: { ...defaultPosCart, ...preloaded?.posCart } };
-  return createStore(rootReducer, state as any);
+function createMockStore(preloaded?: Partial<{ posCart: Partial<PosCartState> }>): any {
+  return configureStore({
+    reducer: { posCart: posCartReducer },
+    preloadedState: { posCart: { ...defaultPosCart, ...preloaded?.posCart } },
+  });
 }
 
 function renderWithStore(store: ReturnType<typeof createMockStore>) {
@@ -91,7 +91,7 @@ describe('Cart', () => {
     );
   });
 
-  it('should dispatch checkoutCart and clearCart on checkout', () => {
+  it('should dispatch submitSale on checkout', () => {
     const store = createMockStore({
       posCart: {
         items: [
@@ -105,11 +105,8 @@ describe('Cart', () => {
     const btn = screen.getByRole('button', { name: /cobrar/i });
     expect(btn).not.toBeDisabled();
     fireEvent.click(btn);
-    expect(dispatchSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'posCart/checkoutCart' }),
-    );
-    expect(dispatchSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'posCart/clearCart' }),
-    );
+    expect(dispatchSpy).toHaveBeenCalledOnce();
+    // submitSale is a thunk (function), not a plain action object
+    expect(typeof dispatchSpy.mock.calls[0][0]).toBe('function');
   });
 });

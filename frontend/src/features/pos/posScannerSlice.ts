@@ -7,7 +7,7 @@ export type ScannerStatus = 'idle' | 'requesting' | 'active' | 'denied' | 'unava
 
 export interface ScanResult {
   barcode: string;
-  source: 'camera' | 'manual';
+  source: 'camera' | 'manual' | 'remote';
   scannedAt: number;
 }
 
@@ -43,6 +43,12 @@ export const processScan = createAsyncThunk<
 
   if (isDuplicate) {
     return { feedback: { message: '', severity: 'success' }, skipped: true };
+  }
+
+  const product = state.inventory.products.find((p) => p.barcode === barcode);
+  if (product) {
+    dispatch(addItem({ productId: product.id, name: product.name, price: product.price }));
+    return { feedback: { message: `Agregado: ${product.name}`, severity: 'success' } };
   }
 
   try {

@@ -10,21 +10,22 @@ import {
   Button,
   IconButton,
   Divider,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { addItem, removeItem, clearCart, checkoutCart, updateItemQuantity } from './posCartSlice';
+import { addItem, removeItem, submitSale, updateItemQuantity, clearCheckoutError } from './posCartSlice';
 
 const Cart: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { items, totals } = useAppSelector((state) => state.posCart);
+  const { items, totals, checkoutLoading, checkoutError } = useAppSelector((state) => state.posCart);
 
   const handleCheckout = () => {
-    if (items.length === 0) return;
-    dispatch(checkoutCart({ items, totals }));
-    dispatch(clearCart());
+    if (items.length === 0 || checkoutLoading) return;
+    dispatch(submitSale({ items, totals }));
   };
 
   return (
@@ -117,15 +118,21 @@ const Cart: React.FC = () => {
           Total: ${totals.total.toFixed(2)}
         </Typography>
 
+        {checkoutError && (
+          <Alert severity="error" sx={{ mt: 1 }} onClose={() => dispatch(clearCheckoutError())}>
+            {checkoutError}
+          </Alert>
+        )}
+
         <Button
           variant="contained"
           color="primary"
           fullWidth
           sx={{ mt: 2 }}
-          disabled={items.length === 0}
+          disabled={items.length === 0 || checkoutLoading}
           onClick={handleCheckout}
         >
-          Cobrar
+          {checkoutLoading ? <CircularProgress size={24} color="inherit" /> : 'Cobrar'}
         </Button>
       </CardContent>
     </Card>
