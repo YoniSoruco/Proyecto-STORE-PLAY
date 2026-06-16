@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   List,
@@ -17,15 +17,17 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { addItem, removeItem, submitSale, updateItemQuantity, clearCheckoutError } from './posCartSlice';
+import { addItem, removeItem, updateItemQuantity, clearCheckoutError } from './posCartSlice';
+import PaymentDialog from './PaymentDialog';
 
 const Cart: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, totals, checkoutLoading, checkoutError } = useAppSelector((state) => state.posCart);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   const handleCheckout = () => {
     if (items.length === 0 || checkoutLoading) return;
-    dispatch(submitSale({ items, totals }));
+    setPaymentOpen(true);
   };
 
   return (
@@ -134,6 +136,13 @@ const Cart: React.FC = () => {
         >
           {checkoutLoading ? <CircularProgress size={24} color="inherit" /> : 'Cobrar'}
         </Button>
+
+        <PaymentDialog 
+          open={paymentOpen} 
+          onClose={() => setPaymentOpen(false)} 
+          items={items} 
+          totals={totals} 
+        />
       </CardContent>
     </Card>
   );

@@ -20,7 +20,7 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
-        name: 'Proyecto Store',
+        name: 'STORE PLAY',
         short_name: 'PStore',
         description: 'Plataforma multi-tenant de comercio',
         theme_color: '#ffffff',

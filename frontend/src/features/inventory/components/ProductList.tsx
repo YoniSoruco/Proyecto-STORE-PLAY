@@ -30,7 +30,6 @@ const ProductList: React.FC<ProductListProps> = ({ onEdit }) => {
     const q = search.toLowerCase();
     return products.filter(
       (p) => p.name.toLowerCase().includes(q)
-        || p.barcode.toLowerCase().includes(q)
         || (p.brand && p.brand.toLowerCase().includes(q))
     );
   }, [products, search]);
@@ -53,7 +52,7 @@ const ProductList: React.FC<ProductListProps> = ({ onEdit }) => {
     <Box>
       <Typography variant="h6" gutterBottom>Inventario de Productos</Typography>
       <TextField
-        placeholder="Buscar por nombre, marca o código..."
+        placeholder="Buscar por nombre o marca..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         size="small"
@@ -69,11 +68,13 @@ const ProductList: React.FC<ProductListProps> = ({ onEdit }) => {
               <TableRow>
                 <TableCell>Nombre</TableCell>
                 <TableCell>Marca</TableCell>
-                <TableCell align="right">Precio</TableCell>
-                <TableCell align="right">Stock</TableCell>
+                <TableCell align="right">Precio Lista</TableCell>
+                <TableCell align="right">con IVA</TableCell>
+                <TableCell align="right">Efectivo</TableCell>
+                <TableCell align="right">Stock Total</TableCell>
                 <TableCell>Categoría</TableCell>
                 <TableCell>Unidad</TableCell>
-                <TableCell>Código</TableCell>
+                <TableCell>Vencimiento</TableCell>
                 <TableCell>Activo</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
@@ -84,17 +85,25 @@ const ProductList: React.FC<ProductListProps> = ({ onEdit }) => {
                   <TableCell>{product.name}</TableCell>
                   <TableCell>{product.brand || '—'}</TableCell>
                   <TableCell align="right">${product.price.toFixed(2)}</TableCell>
+                  <TableCell align="right" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                    ${product.priceWithIva.toFixed(2)}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                    ${product.cashPrice.toFixed(2)}
+                  </TableCell>
                   <TableCell align="right">
                     <Chip
-                      label={product.stock}
+                      label={product.totalStock}
                       size="small"
-                      color={product.stock <= product.minStock ? 'warning' : 'default'}
-                      variant={product.stock <= product.minStock ? 'filled' : 'outlined'}
+                      color={product.totalStock <= product.minStock ? 'warning' : 'default'}
+                      variant={product.totalStock <= product.minStock ? 'filled' : 'outlined'}
                     />
                   </TableCell>
                   <TableCell>{product.categoryName || '—'}</TableCell>
                   <TableCell>{unitLabels[product.saleUnit] || product.saleUnit}</TableCell>
-                  <TableCell>{product.barcode}</TableCell>
+                  <TableCell>
+                    <Chip label={product.requiresExpiration ? 'Sí' : 'No'} size="small" variant="outlined" />
+                  </TableCell>
                   <TableCell>
                     <Chip label={product.active ? 'Sí' : 'No'} size="small"
                       color={product.active ? 'success' : 'default'} variant="outlined" />

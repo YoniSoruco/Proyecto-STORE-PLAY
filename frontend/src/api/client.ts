@@ -18,9 +18,20 @@ apiClient.interceptors.request.use(
   (config) => {
     if (store) {
       const state = store.getState() as RootState;
-      const tenantId = state.tenant.activeTenantId;
-      if (tenantId) {
-        config.headers['X-Tenant-ID'] = tenantId;
+      const { user, activeContext, isAuthenticated, token } = state.auth;
+      
+      if (activeContext?.tenantId) {
+        config.headers['X-Tenant-ID'] = activeContext.tenantId;
+      }
+      
+      if (isAuthenticated && token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      if (isAuthenticated && user && activeContext) {
+        config.headers['X-User-Id'] = user.userId.toString();
+        config.headers['X-User-Role'] = activeContext.role;
+        config.headers['X-Branch-Id'] = (activeContext.branchId || 1).toString();
       }
     }
     return config;

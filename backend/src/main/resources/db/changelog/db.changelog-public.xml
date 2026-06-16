@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="global-001-tenants" author="gemini">
+        <createTable tableName="tenants" schemaName="public">
+            <column name="id" type="VARCHAR(50)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="vertical_type" type="VARCHAR(50)"/>
+            <column name="primary_color" type="VARCHAR(20)"/>
+            <column name="logo_url" type="VARCHAR(255)"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="tenant_features" schemaName="public">
+            <column name="tenant_id" type="VARCHAR(50)">
+                <constraints nullable="false" foreignKeyName="fk_feature_tenant" references="public.tenants(id)"/>
+            </column>
+            <column name="feature" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <insert tableName="tenants" schemaName="public">
+            <column name="id" value="tenant1"/>
+            <column name="name" value="Negocio de Prueba 1"/>
+            <column name="vertical_type" value="KIOSKO"/>
+            <column name="primary_color" value="#1976d2"/>
+        </insert>
+
+        <insert tableName="tenants" schemaName="public">
+            <column name="id" value="tenant2"/>
+            <column name="name" value="Negocio de Prueba 2"/>
+            <column name="vertical_type" value="ROPA"/>
+            <column name="primary_color" value="#9c27b0"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="global-002-identity-users" author="gemini">
+        <createTable tableName="users" schemaName="public">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="full_name" type="VARCHAR(255)"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_system_admin" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- El SuperAdmin maestro (VOS) -->
+        <insert tableName="users" schemaName="public">
+            <column name="email" value="admin@storeplay.com"/>
+            <column name="password" value="$2a$10$8.UnVuG9HHgffUDAlk8q6uy5akLPNpShQXpS4J5fJuek4Qh9hO58."/>
+            <column name="full_name" value="Super Administrador Maestro"/>
+            <column name="is_system_admin" valueBoolean="true"/>
+        </insert>
+
+        <!-- Un dueño de ejemplo -->
+        <insert tableName="users" schemaName="public">
+            <column name="email" value="owner@test.com"/>
+            <column name="password" value="$2a$10$v7K6vM9.K7H8Y7W2vP.hM.Lz.Qy/1uE3Z5u6o/5/3m7N/P7h.1o9."/>
+            <column name="full_name" value="Dueño de Prueba"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="global-003-memberships" author="gemini">
+        <createTable tableName="memberships" schemaName="public">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_mem_user" references="public.users(id)"/>
+            </column>
+            <column name="tenant_id" type="VARCHAR(50)">
+                <constraints nullable="false" foreignKeyName="fk_mem_tenant" references="public.tenants(id)"/>
+            </column>
+            <column name="role" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="branch_id" type="BIGINT"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Vincular al dueño con su negocio de prueba -->
+        <sql>
+            INSERT INTO public.memberships (user_id, tenant_id, role, is_active)
+            SELECT id, 'tenant1', 'OWNER', true FROM public.users WHERE email = 'owner@test.com';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

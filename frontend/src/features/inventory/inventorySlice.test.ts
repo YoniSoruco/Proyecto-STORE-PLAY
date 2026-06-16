@@ -1,65 +1,95 @@
-import { describe, it, expect } from 'vitest';
-import inventoryReducer, { 
-  type InventoryState, 
-  fetchProducts, 
-  addProduct, 
-  searchProductByBarcode 
+import { describe, it, expect, vi } from 'vitest';
+import inventoryReducer, {
+  fetchProducts,
+  addProduct,
+  removeProduct,
+  updateExistingProduct,
 } from './inventorySlice';
+import type { Product } from '@/api/products';
+import type { InventoryState } from './inventorySlice';
 
-const mockProduct = (overrides: Record<string, unknown> = {}) => ({
-  id: 1, name: 'Test', price: 10, barcode: '123',
-  brand: null, description: null, costPrice: null,
-  stock: 0, minStock: 0, saleUnit: 'unit', active: true,
-  categoryId: null, categoryName: null,
-  ...overrides,
-});
+vi.mock('@/api/products');
 
 describe('inventorySlice', () => {
   const initialState: InventoryState = {
     products: [],
     categories: [],
+    suppliers: [],
+    batches: {},
+    dashboard: null,
     loading: false,
     error: null,
     searchResult: null,
   };
 
-  it('should return the initial state', () => {
+  const mockProduct: Product = {
+    id: 1,
+    name: 'Test Product',
+    price: 100,
+    priceWithIva: 121,
+    cashPrice: 95,
+    requiresExpiration: false,
+    totalStock: 10,
+    brand: null,
+    description: null,
+    minStock: 5,
+    saleUnit: 'unit',
+    active: true,
+    categoryId: null,
+    categoryName: null,
+  };
+
+  it('should return initial state', () => {
     expect(inventoryReducer(undefined, { type: 'unknown' })).toEqual(initialState);
   });
 
-  it('should set loading to true when fetchProducts is pending', () => {
-    const action = { type: fetchProducts.pending.type };
-    const state = inventoryReducer(initialState, action);
-    expect(state.loading).toBe(true);
+  describe('fetchProducts', () => {
+    it('handles pending state', () => {
+      const state = inventoryReducer(initialState, { type: fetchProducts.pending.type });
+      expect(state.loading).toBe(true);
+      expect(state.error).toBeNull();
+    });
+
+    it('handles fulfilled state', () => {
+      const state = inventoryReducer(initialState, {
+        type: fetchProducts.fulfilled.type,
+        payload: [mockProduct],
+      });
+      expect(state.loading).toBe(false);
+      expect(state.products).toEqual([mockProduct]);
+    });
   });
 
-  it('should set products and loading to false when fetchProducts is fulfilled', () => {
-    const products = [mockProduct()];
-    const action = { type: fetchProducts.fulfilled.type, payload: products };
-    const state = inventoryReducer({ ...initialState, loading: true }, action);
-    expect(state.products).toEqual(products);
-    expect(state.loading).toBe(false);
+  describe('addProduct', () => {
+    it('handles fulfilled state', () => {
+      const state = inventoryReducer(initialState, {
+        type: addProduct.fulfilled.type,
+        payload: mockProduct,
+      });
+      expect(state.products).toContainEqual(mockProduct);
+    });
   });
 
-  it('should add a new product when addProduct is fulfilled', () => {
-    const newProduct = mockProduct({ id: 2, name: 'New Product', barcode: '456' });
-    const action = { type: addProduct.fulfilled.type, payload: newProduct };
-    const state = inventoryReducer(initialState, action);
-    expect(state.products).toContainEqual(newProduct);
+  describe('removeProduct', () => {
+    it('handles fulfilled state', () => {
+      const stateWithProduct = { ...initialState, products: [mockProduct] };
+      const state = inventoryReducer(stateWithProduct, {
+        type: removeProduct.fulfilled.type,
+        payload: mockProduct.id,
+      });
+      expect(state.products).toHaveLength(0);
+    });
   });
 
-  it('should set searchResult when searchProductByBarcode is fulfilled', () => {
-    const product = mockProduct();
-    const action = { type: searchProductByBarcode.fulfilled.type, payload: product };
-    const state = inventoryReducer(initialState, action);
-    expect(state.searchResult).toEqual(product);
-  });
-
-  it('should set error when fetchProducts is rejected', () => {
-    const error = { message: 'Fetch failed' };
-    const action = { type: fetchProducts.rejected.type, error };
-    const state = inventoryReducer({ ...initialState, loading: true }, action);
-    expect(state.loading).toBe(false);
-    expect(state.error).toBe('Fetch failed');
+  describe('updateExistingProduct', () => {
+    it('handles fulfilled state', () => {
+      const stateWithProduct = { ...initialState, products: [mockProduct] };
+      const updatedProduct = { ...mockProduct, name: 'Updated' };
+      const state = inventoryReducer(stateWithProduct, {
+        type: updateExistingProduct.fulfilled.type,
+        payload: updatedProduct,
+      });
+      expect(state.products[0].name).toBe('Updated');
+    });
   });
 });

@@ -23,8 +23,19 @@ public class LiquibaseConfig {
             @Override
             public void afterPropertiesSet() throws LiquibaseException {
                 setDataSource(ds);
-                setChangeLog("classpath:/db/changelog/db.changelog-master.xml");
+                
+                // 1. Run public schema migrations
+                setChangeLog("classpath:/db/changelog/db.changelog-public.xml");
+                setDefaultSchema("public");
+                try (Connection conn = ds.getConnection()) {
+                    Liquibase liquibase = createLiquibase(conn);
+                    performUpdate(liquibase);
+                } catch (SQLException e) {
+                    throw new LiquibaseException("Migration failed for public schema", e);
+                }
 
+                // 2. Run tenant migrations
+                setChangeLog("classpath:/db/changelog/db.changelog-master.xml");
                 for (String tenant : tenants) {
                     setDefaultSchema(tenant);
                     try (Connection conn = ds.getConnection()) {

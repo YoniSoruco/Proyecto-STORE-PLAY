@@ -5,6 +5,7 @@ import uiReducer from '@/features/ui/uiSlice';
 import inventoryReducer from '@/features/inventory/inventorySlice';
 import posCartReducer from '@/features/pos/posCartSlice';
 import posScannerReducer from '@/features/pos/posScannerSlice';
+import cashReducer from '@/features/pos/cashSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     inventory: inventoryReducer,
     posCart: posCartReducer,
     posScanner: posScannerReducer,
+    cash: cashReducer,
   },
 });
 

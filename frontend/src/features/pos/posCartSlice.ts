@@ -1,5 +1,5 @@
-import { createSlice, createAction, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import { submitSale as submitSaleApi } from '@/api/sales';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import { submitSale as submitSaleApi, type PaymentRequest } from '@/api/sales';
 import { fetchProducts } from '@/features/inventory/inventorySlice';
 
 export interface CartItem {
@@ -40,13 +40,17 @@ const initialState: PosCartState = {
   checkoutError: null,
 };
 
-export const checkoutCart = createAction<{ items: CartItem[]; totals: CartTotals }>('posCart/checkoutCart');
-
-export const submitSale = createAsyncThunk<void, { items: CartItem[]; totals: CartTotals }>(
+export const submitSale = createAsyncThunk<void, { 
+  items: CartItem[]; 
+  totals: CartTotals; 
+  payments: PaymentRequest[];
+  roundingAmount?: number;
+  invoiceType?: string;
+}>(
   'posCart/submitSale',
-  async ({ items, totals }, { dispatch, rejectWithValue }) => {
+  async ({ items, totals, payments, roundingAmount = 0, invoiceType = 'TICKET_NO_FISCAL' }, { dispatch, rejectWithValue }) => {
     try {
-      await submitSaleApi(items, totals);
+      await submitSaleApi(items, totals, payments, roundingAmount, invoiceType);
       dispatch(fetchProducts());
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Error al procesar la venta';

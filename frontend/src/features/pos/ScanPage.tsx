@@ -6,6 +6,25 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setTenantId } from '@/features/tenant/tenantSlice';
 import apiClient from '@/api/client';
 
+type BarcodeFormat =
+  | 'aztec' | 'code_128' | 'code_39' | 'code_93' | 'codabar'
+  | 'data_matrix' | 'ean_13' | 'ean_8' | 'itf' | 'pdf417'
+  | 'qr_code' | 'upc_a' | 'upc_e';
+
+declare global {
+  class BarcodeDetector {
+    constructor(options?: { formats: BarcodeFormat[] });
+    static getSupportedFormats(): Promise<BarcodeFormat[]>;
+    detect(image: ImageBitmapSource): Promise<{ rawValue: string }[]>;
+  }
+  interface MediaTrackCapabilities {
+    torch?: boolean;
+  }
+  interface MediaTrackConstraintSet {
+    torch?: boolean;
+  }
+}
+
 const ScanPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();

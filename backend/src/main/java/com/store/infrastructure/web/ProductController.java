@@ -1,8 +1,7 @@
 package com.store.infrastructure.web;
 
 import com.store.application.product.ProductService;
-import com.store.application.product.dto.ProductRequest;
-import com.store.application.product.dto.ProductResponse;
+import com.store.application.product.dto.*;
 import com.store.domain.product.Category;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -52,9 +51,49 @@ public class ProductController {
                 : ResponseEntity.notFound().build();
     }
 
+    // Lotes (Batches)
+    @GetMapping("/batches")
+    public ResponseEntity<List<BatchResponse>> listAllBatches() {
+        return ResponseEntity.ok(productService.listAllBatches());
+    }
+
+    @PostMapping("/{id}/batches")
+    public ResponseEntity<BatchResponse> addBatch(@PathVariable Long id, @RequestBody BatchRequest request) {
+        BatchRequest updatedRequest = new BatchRequest(id, request.branchId(), request.supplierId(), 
+                request.barcode(), request.stock(), request.costPrice(), request.expirationDate());
+        return ResponseEntity.ok(productService.createBatch(updatedRequest));
+    }
+
+    @GetMapping("/{id}/batches")
+    public ResponseEntity<List<BatchResponse>> listBatches(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.listBatches(id));
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<InventoryDashboardResponse> getDashboardData() {
+        return ResponseEntity.ok(productService.getDashboardData());
+    }
+
     @GetMapping("/categories")
     public ResponseEntity<List<Category>> listCategories() {
         return ResponseEntity.ok(productService.listCategories());
+    }
+
+    // Proveedores (Suppliers)
+    @PostMapping("/suppliers")
+    public ResponseEntity<SupplierResponse> addSupplier(@RequestBody SupplierRequest request) {
+        return ResponseEntity.ok(productService.registerSupplier(request));
+    }
+
+    @GetMapping("/suppliers")
+    public ResponseEntity<List<SupplierResponse>> listSuppliers() {
+        return ResponseEntity.ok(productService.listSuppliers());
+    }
+
+    @DeleteMapping("/suppliers/{id}")
+    public ResponseEntity<Void> deleteSupplier(@PathVariable Long id) {
+        productService.deleteSupplier(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/categories")

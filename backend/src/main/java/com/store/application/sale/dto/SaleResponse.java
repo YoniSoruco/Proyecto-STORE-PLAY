@@ -10,13 +10,22 @@ public record SaleResponse(
     BigDecimal subtotal,
     BigDecimal tax,
     BigDecimal total,
+    BigDecimal roundingAmount,
+    String invoiceType,
+    String invoiceNumber,
     LocalDateTime createdAt,
-    List<SaleItemResponse> items
+    List<SaleItemResponse> items,
+    List<PaymentMethodResponse> payments
 ) {
   public record SaleItemResponse(
       Long productId,
       String productName,
       BigDecimal unitPrice,
       int quantity
+  ) {}
+
+  public record PaymentMethodResponse(
+      String method,
+      BigDecimal amount
   ) {}
 }

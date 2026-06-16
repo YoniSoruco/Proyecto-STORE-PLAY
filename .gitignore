@@ -32,6 +32,10 @@ Thumbs.db
 
 # --- AI tools ---
 .atl/
+sdd/
+
+# --- Documentation ---
+Documents/
 
 # --- Liquibase / DB ---
 databasechangelog.csv

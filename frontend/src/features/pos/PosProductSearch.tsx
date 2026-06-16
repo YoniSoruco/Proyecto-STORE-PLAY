@@ -110,7 +110,7 @@ const PosProductSearch: React.FC = () => {
                 >
                   <ListItemText
                     primary={product.name}
-                    secondary={`$${product.price.toFixed(2)} — ${product.barcode}`}
+                    secondary={`$${product.price.toFixed(2)} — Stock: ${product.totalStock}`}
                   />
                 </ListItemButton>
                 {selectedProduct?.id === product.id && (

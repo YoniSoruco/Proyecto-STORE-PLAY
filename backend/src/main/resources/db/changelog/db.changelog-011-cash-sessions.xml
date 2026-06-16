@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="011-cash-sessions" author="gemini">
+        <createTable tableName="cash_sessions">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="branch_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="opened_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="closed_at" type="TIMESTAMP"/>
+            <column name="initial_amount" type="DECIMAL(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="final_amount_expected" type="DECIMAL(19,4)"/>
+            <column name="final_amount_real" type="DECIMAL(19,4)"/>
+            <column name="is_open" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="cash_sessions" baseColumnNames="branch_id"
+            constraintName="fk_session_branch" referencedTableName="branches"
+            referencedColumnNames="id"/>
+
+        <addColumn tableName="sales">
+            <column name="cash_session_id" type="BIGINT"/>
+        </addColumn>
+
+        <addForeignKeyConstraint baseTableName="sales" baseColumnNames="cash_session_id"
+            constraintName="fk_sale_session" referencedTableName="cash_sessions"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+</databaseChangeLog>

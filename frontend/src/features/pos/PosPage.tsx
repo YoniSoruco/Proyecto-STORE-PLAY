@@ -1,18 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Container, Grid, Typography, Button, Box, Dialog, DialogTitle, DialogContent, IconButton } from '@mui/material';
-import { PhoneAndroid, Close } from '@mui/icons-material';
+import { Container, Grid, Typography, Button, Box, Dialog, DialogTitle, DialogContent, IconButton, Chip } from '@mui/material';
+import { PhoneAndroid, Close, LockClock } from '@mui/icons-material';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { processScan } from './posScannerSlice';
+import { checkActiveSession } from './cashSlice';
 import PosProductSearch from './PosProductSearch';
 import Cart from './Cart';
 import Scanner from './Scanner';
+import OpenCashDialog from './OpenCashDialog';
+import CloseCashDialog from './CloseCashDialog';
 
 const PosPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { activeTenantId } = useAppSelector((state) => state.tenant);
+  const { user } = useAppSelector((state) => state.auth);
+  const { activeSession, loading } = useAppSelector((state) => state.cash);
+  
   const [qrOpen, setQrOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const firstScanRef = useRef(true);
+
+  useEffect(() => {
+    if (user) {
+      dispatch(checkActiveSession(user.userId));
+    }
+  }, [user, dispatch]);
 
   useEffect(() => {
     if (!activeTenantId) return;
@@ -23,7 +36,7 @@ const PosPage: React.FC = () => {
     es.addEventListener('scan', (event) => {
       try {
         const { barcode } = JSON.parse(event.data);
-        dispatch(processScan({ barcode, source: 'remote' }));
+        dispatch(processScan(barcode));
         if (firstScanRef.current) {
           firstScanRef.current = false;
           setQrOpen(false);
@@ -40,20 +53,45 @@ const PosPage: React.FC = () => {
     ? `${import.meta.env.VITE_NGROK_URL || window.location.origin}/scan?tenant=${activeTenantId}`
     : '';
 
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 10 }}>Cargando caja...</Box>;
+
   return (
     <Container sx={{ py: 4 }}>
+      <OpenCashDialog open={!activeSession} />
+      <CloseCashDialog open={closeDialogOpen} onClose={() => setCloseDialogOpen(false)} />
+
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" fontWeight="bold">
           Punto de Venta
         </Typography>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<PhoneAndroid />}
-          onClick={() => { (document.activeElement as HTMLElement)?.blur(); setQrOpen(true); }}
-        >
-          Escanear con celular
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {activeSession && (
+            <>
+              <Chip 
+                icon={<LockClock />} 
+                label={`Turno abierto: ${new Date(activeSession.openedAt).toLocaleTimeString()}`}
+                color="success" 
+                variant="outlined"
+              />
+              <Button 
+                variant="outlined" 
+                color="error" 
+                size="small"
+                onClick={() => setCloseDialogOpen(true)}
+              >
+                Cerrar Caja
+              </Button>
+            </>
+          )}
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<PhoneAndroid />}
+            onClick={() => { (document.activeElement as HTMLElement)?.blur(); setQrOpen(true); }}
+          >
+            Escanear con celular
+          </Button>
+        </Box>
       </Box>
 
       <Grid container spacing={3}>
@@ -87,7 +125,6 @@ const PosPage: React.FC = () => {
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, wordBreak: 'break-all' }}>
                 {scanUrl}
               </Typography>
-
             </>
           ) : (
             <Typography color="text.secondary">Seleccioná un tenant primero</Typography>

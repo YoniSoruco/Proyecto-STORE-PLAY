@@ -29,5 +29,10 @@ public class SaleController {
     }
   }
 
+  @org.springframework.web.bind.annotation.GetMapping
+  public ResponseEntity<java.util.List<SaleResponse>> listSales() {
+    return ResponseEntity.ok(saleService.listSales());
+  }
+
   private record ErrorResponse(String error) {}
 }

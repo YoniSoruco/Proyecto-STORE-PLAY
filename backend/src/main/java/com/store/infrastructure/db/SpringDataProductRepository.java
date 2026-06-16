@@ -7,5 +7,4 @@ import java.util.Optional;
 
 @Repository
 public interface SpringDataProductRepository extends JpaRepository<ProductEntity, Long> {
-    Optional<ProductEntity> findByBarcode(String barcode);
 }

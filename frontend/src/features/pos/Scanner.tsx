@@ -26,7 +26,7 @@ const Scanner: React.FC = () => {
       return;
     }
 
-    dispatch(processScan({ barcode: trimmed, source: 'manual' }));
+    dispatch(processScan(trimmed));
     setManualInput('');
     setManualError('');
     inputRef.current?.focus();
@@ -60,7 +60,7 @@ const Scanner: React.FC = () => {
         </Box>
 
         {feedback && (
-          <Alert severity={feedback.severity} sx={{ mt: 1 }}>{feedback.message}</Alert>
+          <Alert severity="success" sx={{ mt: 1 }}>{feedback}</Alert>
         )}
       </CardContent>
     </Card>

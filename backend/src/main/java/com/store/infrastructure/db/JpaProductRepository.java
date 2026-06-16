@@ -1,8 +1,10 @@
 package com.store.infrastructure.db;
 
+import com.store.domain.product.Batch;
 import com.store.domain.product.Category;
 import com.store.domain.product.Product;
 import com.store.domain.product.ProductRepository;
+import com.store.domain.product.Supplier;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,11 +16,17 @@ public class JpaProductRepository implements ProductRepository {
 
     private final SpringDataProductRepository springDataProductRepository;
     private final SpringDataCategoryRepository springDataCategoryRepository;
+    private final SpringDataBatchRepository springDataBatchRepository;
+    private final SpringDataSupplierRepository springDataSupplierRepository;
 
     public JpaProductRepository(SpringDataProductRepository springDataProductRepository,
-                                SpringDataCategoryRepository springDataCategoryRepository) {
+                                SpringDataCategoryRepository springDataCategoryRepository,
+                                SpringDataBatchRepository springDataBatchRepository,
+                                SpringDataSupplierRepository springDataSupplierRepository) {
         this.springDataProductRepository = springDataProductRepository;
         this.springDataCategoryRepository = springDataCategoryRepository;
+        this.springDataBatchRepository = springDataBatchRepository;
+        this.springDataSupplierRepository = springDataSupplierRepository;
     }
 
     @Override
@@ -36,8 +44,8 @@ public class JpaProductRepository implements ProductRepository {
 
     @Override
     public Optional<Product> findByBarcode(String barcode) {
-        return springDataProductRepository.findByBarcode(barcode)
-                .map(this::mapToDomain);
+        return springDataBatchRepository.findByBarcode(barcode)
+                .map(batchEntity -> mapToDomain(batchEntity.getProduct()));
     }
 
     @Override
@@ -74,16 +82,72 @@ public class JpaProductRepository implements ProductRepository {
         return mapCategoryToDomain(saved);
     }
 
+    @Override
+    public Batch saveBatch(Batch batch) {
+        BatchEntity entity = mapBatchToEntity(batch);
+        BatchEntity saved = springDataBatchRepository.save(entity);
+        return mapBatchToDomain(saved);
+    }
+
+    @Override
+    public List<Batch> findAllBatches() {
+        return springDataBatchRepository.findAll()
+                .stream()
+                .map(this::mapBatchToDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Batch> findBatchesByProductId(Long productId) {
+        return springDataBatchRepository.findByProduct_Id(productId)
+                .stream()
+                .map(this::mapBatchToDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<Batch> findBatchByBarcode(String barcode) {
+        return springDataBatchRepository.findByBarcode(barcode)
+                .map(this::mapBatchToDomain);
+    }
+
+    @Override
+    public void deleteBatchById(Long id) {
+        springDataBatchRepository.deleteById(id);
+    }
+
+    @Override
+    public Supplier saveSupplier(Supplier supplier) {
+        SupplierEntity entity = mapSupplierToEntity(supplier);
+        SupplierEntity saved = springDataSupplierRepository.save(entity);
+        return mapSupplierToDomain(saved);
+    }
+
+    @Override
+    public List<Supplier> findAllSuppliers() {
+        return springDataSupplierRepository.findAll().stream()
+                .map(this::mapSupplierToDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<Supplier> findSupplierById(Long id) {
+        return springDataSupplierRepository.findById(id).map(this::mapSupplierToDomain);
+    }
+
+    @Override
+    public void deleteSupplierById(Long id) {
+        springDataSupplierRepository.deleteById(id);
+    }
+
     private ProductEntity mapToEntity(Product product) {
         ProductEntity entity = new ProductEntity();
         entity.setId(product.getId());
         entity.setName(product.getName());
         entity.setPrice(product.getPrice());
-        entity.setBarcode(product.getBarcode());
+        entity.setCashPrice(product.getCashPrice());
+        entity.setRequiresExpiration(product.isRequiresExpiration());
         entity.setBrand(product.getBrand());
         entity.setDescription(product.getDescription());
-        entity.setCostPrice(product.getCostPrice());
-        entity.setStock(product.getStock());
         entity.setMinStock(product.getMinStock());
         entity.setSaleUnit(product.getSaleUnit());
         entity.setActive(product.isActive());
@@ -95,21 +159,59 @@ public class JpaProductRepository implements ProductRepository {
     }
 
     private Product mapToDomain(ProductEntity entity) {
-        return new Product(
+        Product product = new Product(
                 entity.getId(),
                 entity.getName(),
-                entity.getPrice(),
-                entity.getBarcode(),
                 entity.getBrand(),
                 entity.getDescription(),
-                entity.getCostPrice(),
-                entity.getStock(),
+                entity.getPrice(),
+                entity.getCashPrice(),
+                entity.isRequiresExpiration(),
                 entity.getMinStock(),
                 entity.getSaleUnit(),
                 entity.isActive(),
                 entity.getCategory() != null ? entity.getCategory().getId() : null,
                 entity.getCategory() != null ? entity.getCategory().getName() : null
         );
+        
+        // Calcular total stock
+        if (entity.getBatches() != null) {
+            int totalStock = entity.getBatches().stream().mapToInt(BatchEntity::getStock).sum();
+            product.setTotalStock(totalStock);
+        }
+        
+        return product;
+    }
+
+    private Batch mapBatchToDomain(BatchEntity entity) {
+        return new Batch(
+                entity.getId(),
+                entity.getProductId(),
+                entity.getBranchId(),
+                entity.getSupplierId(),
+                entity.getBarcode(),
+                entity.getStock(),
+                entity.getCostPrice(),
+                entity.getAdmissionDate(),
+                entity.getExpirationDate()
+        );
+    }
+
+    private BatchEntity mapBatchToEntity(Batch batch) {
+        BatchEntity entity = new BatchEntity();
+        entity.setId(batch.getId());
+        entity.setBranchId(batch.getBranchId());
+        entity.setSupplierId(batch.getSupplierId());
+        entity.setBarcode(batch.getBarcode());
+        entity.setStock(batch.getStock());
+        entity.setCostPrice(batch.getCostPrice());
+        entity.setAdmissionDate(batch.getAdmissionDate());
+        entity.setExpirationDate(batch.getExpirationDate());
+        if (batch.getProductId() != null) {
+            springDataProductRepository.findById(batch.getProductId())
+                .ifPresent(entity::setProduct);
+        }
+        return entity;
     }
 
     private Category mapCategoryToDomain(CategoryEntity entity) {
@@ -121,6 +223,21 @@ public class JpaProductRepository implements ProductRepository {
         entity.setId(category.getId());
         entity.setName(category.getName());
         entity.setDescription(category.getDescription());
+        return entity;
+    }
+
+    private Supplier mapSupplierToDomain(SupplierEntity entity) {
+        return new Supplier(entity.getId(), entity.getName(), entity.getAddress(), 
+                entity.getPhoneNumber(), entity.isActive());
+    }
+
+    private SupplierEntity mapSupplierToEntity(Supplier supplier) {
+        SupplierEntity entity = new SupplierEntity();
+        entity.setId(supplier.getId());
+        entity.setName(supplier.getName());
+        entity.setAddress(supplier.getAddress());
+        entity.setPhoneNumber(supplier.getPhoneNumber());
+        entity.setActive(supplier.isActive());
         return entity;
     }
 }

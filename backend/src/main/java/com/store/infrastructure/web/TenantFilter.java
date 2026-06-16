@@ -16,25 +16,26 @@ public class TenantFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/actuator") || "OPTIONS".equalsIgnoreCase(request.getMethod());
+        return path.startsWith("/actuator") 
+            || path.startsWith("/api/auth") 
+            || path.startsWith("/api/public")
+            || "OPTIONS".equalsIgnoreCase(request.getMethod());
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        System.out.println("TenantFilter: processing request to " + request.getRequestURI());
         String tenantId = request.getHeader(TENANT_HEADER);
         if (tenantId == null || tenantId.trim().isEmpty()) {
             tenantId = request.getParameter("tenant");
         }
 
-        if (tenantId == null || tenantId.trim().isEmpty()) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing " + TENANT_HEADER + " header or tenant param");
-            return;
-        }
+        // Si no hay tenantId pero la ruta es filtrada, usamos 'public' por defecto para evitar errores 400
+        // en esta etapa de transición, o simplemente no seteamos el contexto.
+        final String effectiveTenantId = (tenantId != null && !tenantId.trim().isEmpty()) ? tenantId : "public";
 
-        TenantContext.runWithTenant(tenantId, () -> {
+        TenantContext.runWithTenant(effectiveTenantId, () -> {
             try {
                 filterChain.doFilter(request, response);
             } catch (IOException | ServletException e) {

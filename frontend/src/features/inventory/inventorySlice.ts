@@ -1,12 +1,18 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import * as api from '@/api/products';
 import * as categoryApi from '@/api/categories';
-import type { Product } from '@/api/products';
+import * as supplierApi from '@/api/suppliers';
+import type { Product, Batch } from '@/api/products';
 import type { Category } from '@/api/categories';
+import type { Supplier } from '@/api/suppliers';
 
 export interface InventoryState {
   products: Product[];
   categories: Category[];
+  suppliers: Supplier[];
+  batches: Record<number, Batch[]>; // productId -> Batch[]
+  allBatches: Batch[];
+  dashboard: api.InventoryDashboard | null;
   loading: boolean;
   error: string | null;
   searchResult: Product | null;
@@ -15,6 +21,10 @@ export interface InventoryState {
 const initialState: InventoryState = {
   products: [],
   categories: [],
+  suppliers: [],
+  batches: {},
+  allBatches: [],
+  dashboard: null,
   loading: false,
   error: null,
   searchResult: null,
@@ -67,6 +77,57 @@ export const updateExistingProduct = createAsyncThunk(
   'inventory/updateExistingProduct',
   async ({ id, data }: { id: number; data: api.CreateProductRequest }) => {
     return await api.updateProduct(id, data);
+  }
+);
+
+export const fetchBatches = createAsyncThunk(
+  'inventory/fetchBatches',
+  async (productId: number) => {
+    const batches = await api.getBatches(productId);
+    return { productId, batches };
+  }
+);
+
+export const fetchAllBatches = createAsyncThunk(
+  'inventory/fetchAllBatches',
+  async () => {
+    return await api.getAllBatches();
+  }
+);
+
+export const addBatchToProduct = createAsyncThunk(
+  'inventory/addBatchToProduct',
+  async ({ productId, data }: { productId: number; data: api.CreateBatchRequest }) => {
+    return await api.addBatch(productId, data);
+  }
+);
+
+export const fetchInventoryDashboard = createAsyncThunk(
+  'inventory/fetchDashboard',
+  async () => {
+    return await api.getDashboardData();
+  }
+);
+
+export const fetchSuppliers = createAsyncThunk(
+  'inventory/fetchSuppliers',
+  async () => {
+    return await supplierApi.getSuppliers();
+  }
+);
+
+export const addSupplierToStore = createAsyncThunk(
+  'inventory/addSupplier',
+  async (data: supplierApi.CreateSupplierRequest) => {
+    return await supplierApi.createSupplier(data);
+  }
+);
+
+export const removeSupplier = createAsyncThunk(
+  'inventory/removeSupplier',
+  async (id: number) => {
+    await supplierApi.deleteSupplier(id);
+    return id;
   }
 );
 
@@ -143,6 +204,40 @@ const inventorySlice = createSlice({
       .addCase(updateExistingProduct.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Error al actualizar producto';
+      })
+      .addCase(fetchBatches.fulfilled, (state, action) => {
+        state.batches[action.payload.productId] = action.payload.batches;
+      })
+      .addCase(fetchAllBatches.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchAllBatches.fulfilled, (state, action) => {
+        state.loading = false;
+        state.allBatches = action.payload;
+      })
+      .addCase(addBatchToProduct.fulfilled, (state, action) => {
+        const productId = action.payload.productId;
+        if (!state.batches[productId]) state.batches[productId] = [];
+        state.batches[productId].push(action.payload);
+        state.allBatches.push(action.payload);
+        
+        // Actualizar totalStock del producto localmente
+        const product = state.products.find(p => p.id === productId);
+        if (product) {
+          product.totalStock += action.payload.stock;
+        }
+      })
+      .addCase(fetchInventoryDashboard.fulfilled, (state, action) => {
+        state.dashboard = action.payload;
+      })
+      .addCase(fetchSuppliers.fulfilled, (state, action) => {
+        state.suppliers = action.payload;
+      })
+      .addCase(addSupplierToStore.fulfilled, (state, action) => {
+        state.suppliers.push(action.payload);
+      })
+      .addCase(removeSupplier.fulfilled, (state, action) => {
+        state.suppliers = state.suppliers.filter(s => s.id !== action.payload);
       });
   },
 });

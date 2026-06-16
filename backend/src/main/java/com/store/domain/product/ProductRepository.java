@@ -12,4 +12,17 @@ public interface ProductRepository {
     List<Category> findAllCategories();
     Optional<Category> findCategoryById(Long id);
     Category saveCategory(Category category);
+
+    // Lotes (Batches)
+    Batch saveBatch(Batch batch);
+    List<Batch> findAllBatches();
+    List<Batch> findBatchesByProductId(Long productId);
+    Optional<Batch> findBatchByBarcode(String barcode);
+    void deleteBatchById(Long id);
+
+    // Proveedores (Suppliers)
+    Supplier saveSupplier(Supplier supplier);
+    List<Supplier> findAllSuppliers();
+    Optional<Supplier> findSupplierById(Long id);
+    void deleteSupplierById(Long id);
 }

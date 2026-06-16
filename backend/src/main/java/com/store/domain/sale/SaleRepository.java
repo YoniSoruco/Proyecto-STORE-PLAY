@@ -1,8 +1,10 @@
 package com.store.domain.sale;
 
-import com.store.domain.product.Product;
+import java.util.List;
+import java.util.Optional;
 
 public interface SaleRepository {
   Sale save(Sale sale);
-  void reduceStock(Product product, int quantity);
+  List<Sale> findAll();
+  Optional<Sale> findById(Long id);
 }

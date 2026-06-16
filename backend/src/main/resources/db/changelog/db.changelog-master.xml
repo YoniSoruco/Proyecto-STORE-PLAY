@@ -119,4 +119,174 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="005-restructure-product-batch" author="gemini">
+        <addColumn tableName="products">
+            <column name="cash_price" type="DECIMAL(19,4)"/>
+            <column name="requires_expiration" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <!-- Inicializar cash_price con un 5% de descuento sobre el precio de lista -->
+        <sql>
+            UPDATE products SET cash_price = price * 0.95;
+        </sql>
+
+        <createTable tableName="batches">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="product_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="barcode" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="stock" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cost_price" type="DECIMAL(19,4)"/>
+            <column name="admission_date" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expiration_date" type="TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="batches" baseColumnNames="product_id"
+            constraintName="fk_batch_product" referencedTableName="products"
+            referencedColumnNames="id"/>
+
+        <!-- Migrar datos existentes: crear un lote por cada producto -->
+        <sql>
+            INSERT INTO batches (product_id, barcode, stock, cost_price, admission_date)
+            SELECT id, barcode, stock, cost_price, COALESCE(created_at, CURRENT_TIMESTAMP)
+            FROM products;
+        </sql>
+
+        <dropColumn tableName="products" columnName="barcode"/>
+        <dropColumn tableName="products" columnName="stock"/>
+        <dropColumn tableName="products" columnName="cost_price"/>
+    </changeSet>
+
+    <changeSet id="006-sales-payments-and-rounding" author="gemini">
+        <addColumn tableName="sales">
+            <column name="rounding_amount" type="DECIMAL(12,2)" defaultValueNumeric="0"/>
+        </addColumn>
+
+        <createTable tableName="payment_methods">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="sale_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_payment_sale" references="sales(id)"/>
+            </column>
+            <column name="method" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(12,2)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Migrar ventas existentes: asignar método EFECTIVO por el total de la venta -->
+        <sql>
+            INSERT INTO payment_methods (sale_id, method, amount)
+            SELECT id, 'EFECTIVO', total FROM sales;
+        </sql>
+    </changeSet>
+
+    <changeSet id="007-multi-branch-tables" author="gemini">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="branches"/>
+            </not>
+        </preConditions>
+        <createTable tableName="branches">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="VARCHAR(255)"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <insert tableName="branches">
+            <column name="name" value="Sucursal Central"/>
+            <column name="address" value="Calle Principal 123"/>
+            <column name="is_active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="007b-add-branch-id-to-batches" author="gemini">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="batches" columnName="branch_id"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="batches">
+            <column name="branch_id" type="BIGINT"/>
+        </addColumn>
+
+        <sql>
+            UPDATE batches SET branch_id = 1 WHERE branch_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="batches" columnName="branch_id" columnDataType="BIGINT"/>
+
+        <addForeignKeyConstraint baseTableName="batches" baseColumnNames="branch_id"
+            constraintName="fk_batch_branch" referencedTableName="branches"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="008-sale-invoice-details" author="gemini">
+        <addColumn tableName="sales">
+            <column name="invoice_type" type="VARCHAR(20)" defaultValue="TICKET_NO_FISCAL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="invoice_number" type="VARCHAR(50)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="009-suppliers-and-batch-costs" author="gemini">
+        <createTable tableName="suppliers">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="VARCHAR(255)"/>
+            <column name="phone_number" type="VARCHAR(50)"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addColumn tableName="batches">
+            <column name="supplier_id" type="BIGINT"/>
+        </addColumn>
+
+        <addForeignKeyConstraint baseTableName="batches" baseColumnNames="supplier_id"
+            constraintName="fk_batch_supplier" referencedTableName="suppliers"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="011-cleanup-obsolete-tables" author="gemini">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="employees"/>
+        </preConditions>
+        <dropTable tableName="employees"/>
+    </changeSet>
+
+    <changeSet id="012-cleanup-legacy-users" author="gemini">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="users"/>
+        </preConditions>
+        <dropTable tableName="users"/>
+    </changeSet>
+
 </databaseChangeLog>
