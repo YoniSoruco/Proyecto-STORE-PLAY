@@ -25,13 +25,23 @@ Plataforma multi-tenant de comercio (POS + inventario). Spring Boot 3 + React 19
 
 Separación por schema de PostgreSQL. Cada tenant tiene su propio schema (`tenant1`, `tenant2`, etc.) con sus tablas. Hibernate usa `MultiTenantConnectionProviderImpl` que ejecuta `SET search_path TO <tenant_id>` por conexión.
 
+## Funcionalidades Clave
+
+- **Gestión Multi-tenant**: Creación dinámica de inquilinos (tenants), sucursales (branches) y membresías.
+- **Seguridad**: Autenticación basada en JWT, autorización por roles (ADMIN, USER) y filtrado de contexto por inquilino.
+- **POS (Punto de Venta)**:
+  - Escaneo de códigos de barra (soporte para móvil como scanner vía SSE/QR).
+  - Gestión de Sesiones de Caja (Apertura, Cierre, Arqueo).
+  - Reportes de Rentabilidad e Historial de Ventas.
+- **Inventario**: Control de stock, gestión de lotes (batches), proveedores y categorías.
+
 ## Stack
 
 | Capa | Tecnología |
 |------|-----------|
 | Frontend | React 19, TypeScript, Vite, MUI 9, Redux Toolkit, Axios |
-| Backend | Java 21, Spring Boot 3.4, Hibernate 6, Liquibase |
-| DB | PostgreSQL 17+ |
+| Backend | Java 21, Spring Boot 3.4, Spring Security, JWT, Hibernate 6, Liquibase |
+| DB | PostgreSQL 17+ (Schema-per-tenant) |
 | PWA | vite-plugin-pwa con Workbox |
 | Tests | Vitest (frontend), JUnit 5 (backend) |
 
@@ -146,12 +156,16 @@ Crear instancia RDS PostgreSQL 17 (t4g.small, 20GB gp3). Pasar endpoint por env 
 ```
 ├── backend/
 │   ├── src/main/java/com/store/
-│   │   ├── application/          # Casos de uso (productos)
-│   │   ├── domain/               # Modelo de dominio
+│   │   ├── application/          # Casos de uso
+│   │   │   ├── membership/       # Gestión de Tenants, Branches y Miembros
+│   │   │   ├── product/          # CRUD Productos, Proveedores y Lotes
+│   │   │   ├── sale/             # Ventas, Sesiones de Caja y Reportes
+│   │   │   └── security/         # Lógica de Auth y JWT
+│   │   ├── domain/               # Entidades y Repositorios (Lógica de negocio)
 │   │   ├── infrastructure/
-│   │   │   ├── config/           # Liquibase, CORS, Persistencia
-│   │   │   ├── db/               # Multi-tenancy, repositorios JPA
-│   │   │   └── web/              # Controladores REST
+│   │   │   ├── config/           # SecurityConfig, Liquibase, CORS
+│   │   │   ├── db/               # Multi-tenancy, Repositorios JPA
+│   │   │   └── web/              # Controladores REST (Controllers)
 │   │   └── ProyectoStoreApplication.java
 │   ├── src/main/resources/
 │   │   ├── db/changelog/         # Migrations (Liquibase XML)
@@ -160,14 +174,16 @@ Crear instancia RDS PostgreSQL 17 (t4g.small, 20GB gp3). Pasar endpoint por env 
 │   └── pom.xml
 ├── frontend/
 │   ├── src/
-│   │   ├── api/                  # Axios + endpoints
-│   │   ├── features/             # Redux slices + components
-│   │   │   ├── inventory/        # CRUD productos + categorías
-│   │   │   └── pos/              # Punto de venta + scanner
+│   │   ├── api/                  # Axios + servicios de API
+│   │   ├── features/             # Redux slices + componentes por dominio
+│   │   │   ├── auth/             # Login y selección de contexto
+│   │   │   ├── inventory/        # CRUD productos, stock y proveedores
+│   │   │   ├── pos/              # Carrito, scanner, caja y reportes
+│   │   │   ├── settings/         # Configuración de sucursales y usuarios
+│   │   │   └── ui/               # Layout y Dashboard
 │   │   └── App.tsx
 │   ├── package.json
 │   └── vite.config.ts
-├── sdd/                          # SDD artifacts
 └── README.md
 ```
 
