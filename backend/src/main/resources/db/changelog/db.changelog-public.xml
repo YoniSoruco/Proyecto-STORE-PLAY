@@ -110,4 +110,5 @@
 
     <include file="db/changelog/db.changelog-013-password-reset.xml"/>
     <include file="db/changelog/db.changelog-014-tenant-features.xml"/>
+    <include file="db/changelog/db.changelog-015-user-phone-and-multi-branch.xml"/>
 </databaseChangeLog>

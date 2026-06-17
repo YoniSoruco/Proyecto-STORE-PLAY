@@ -4,7 +4,8 @@ import com.store.domain.tenant.UserRole;
 
 public record MemberRequest(
     String email,
-    String fullName, // Opcional, por si queremos crearlo si no existe
+    String fullName,
+    String phoneNumber,
     UserRole role,
-    Long branchId
+    java.util.Set<Long> branchIds
 ) {}

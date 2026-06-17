@@ -124,7 +124,7 @@ public class AuthService {
         return membershipRepository.findByUserIdAndTenantId(userId, tenant.getId()).stream()
                 .map(m -> new LoginResponse.TenantAccessDto(
                         tenant.getId(), tenant.getName(), tenant.getVerticalType(), tenant.getPrimaryColor(),
-                        m.getRole(), m.getBranchId(), tenant.getFeatures()
+                        m.getRole(), m.getBranchIds(), tenant.getFeatures()
                 )).toList();
     }
 }

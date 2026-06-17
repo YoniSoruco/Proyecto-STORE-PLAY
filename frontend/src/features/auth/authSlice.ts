@@ -9,7 +9,7 @@ export interface TenantAccess {
   verticalType: string;
   primaryColor?: string;
   role: UserRole;
-  branchId: number | null;
+  branchIds: number[] | null;
   features: string[];
 }
 
@@ -68,7 +68,7 @@ const authSlice = createSlice({
         const t = action.payload.availableTenants[0];
         state.activeContext = {
           tenantId: t.tenantId,
-          branchId: t.branchId,
+          branchId: (t.branchIds && t.branchIds.length > 0) ? t.branchIds[0] : null,
           role: t.role,
         };
       }

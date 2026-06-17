@@ -17,7 +17,7 @@ public record LoginResponse(
         String verticalType, 
         String primaryColor,
         UserRole role,
-        Long branchId,
+        java.util.Set<Long> branchIds,
         List<String> features
     ) {}
 }

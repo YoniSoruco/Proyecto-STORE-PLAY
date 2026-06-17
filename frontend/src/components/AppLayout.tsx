@@ -122,15 +122,23 @@ function AppLayout({ children }: AppLayoutProps) {
   const appBarColor = activeTenantAccess?.primaryColor || '#1976d2';
   const enabledModules = activeTenantAccess?.features || [];
 
+  // Filtrar roles disponibles para el negocio actual
+  const availableRoles = user?.availableTenants
+    .filter(t => t.tenantId === activeContext?.tenantId)
+    .map(t => t.role) || [];
+
+  // Obtener IDs de sucursales permitidas
+  const allowedBranchIds = activeTenantAccess?.branchIds || [];
+
   const handleRoleChange = (newRole: UserRole) => {
-    if (activeContext) {
+    if (activeContext && (availableRoles.includes(newRole) || user?.isSystemAdmin)) {
       dispatch(setContext({ ...activeContext, role: newRole }));
       dispatch(fetchProducts());
     }
   };
 
   const handleBranchChange = (newBranchId: number) => {
-    if (activeContext) {
+    if (activeContext && (allowedBranchIds.length === 0 || allowedBranchIds.includes(newBranchId))) {
       dispatch(setContext({ ...activeContext, branchId: newBranchId }));
       dispatch(fetchProducts());
     }
@@ -141,7 +149,7 @@ function AppLayout({ children }: AppLayoutProps) {
     if (access) {
       dispatch(setContext({
         tenantId: access.tenantId,
-        branchId: access.branchId,
+        branchId: (access.branchIds && access.branchIds.length > 0) ? access.branchIds[0] : null,
         role: access.role
       }));
       dispatch(setActiveTenantId(newTenantId));
@@ -277,24 +285,28 @@ function AppLayout({ children }: AppLayoutProps) {
                 onChange={(e) => handleRoleChange(e.target.value as UserRole)}
                 sx={{ color: 'white', fontSize: '0.8rem', '&:before': { borderColor: 'white' } }}
               >
-                <MenuItem value="SUPERADMIN">S-Admin</MenuItem>
-                <MenuItem value="OWNER">Dueño</MenuItem>
-                <MenuItem value="ADMIN">Admin</MenuItem>
-                <MenuItem value="EMPLOYEE">Empleado</MenuItem>
+                {availableRoles.includes('SUPERADMIN') && <MenuItem value="SUPERADMIN">S-Admin</MenuItem>}
+                {availableRoles.includes('OWNER') && <MenuItem value="OWNER">Dueño</MenuItem>}
+                {availableRoles.includes('ADMIN') && <MenuItem value="ADMIN">Admin</MenuItem>}
+                {availableRoles.includes('EMPLOYEE') && <MenuItem value="EMPLOYEE">Empleado</MenuItem>}
               </Select>
             </FormControl>
 
             <FormControl size="small" variant="standard" sx={{ minWidth: 100 }}>
               <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}>Sucursal</InputLabel>
               <Select
-                value={activeContext?.branchId || 1}
+                value={activeContext?.branchId || (allowedBranchIds.length > 0 ? allowedBranchIds[0] : 1)}
                 label="Sucursal"
                 onChange={(e) => handleBranchChange(Number(e.target.value))}
                 sx={{ color: 'white', fontSize: '0.8rem', '&:before': { borderColor: 'white' } }}
               >
-                <MenuItem value={1}>Central</MenuItem>
-                <MenuItem value={2}>Norte</MenuItem>
-                <MenuItem value={3}>Sur</MenuItem>
+                {allowedBranchIds.length === 0 ? (
+                  <MenuItem value={1}>Todas</MenuItem>
+                ) : (
+                  allowedBranchIds.map(id => (
+                    <MenuItem key={id} value={id}>Sucursal {id}</MenuItem>
+                  ))
+                )}
               </Select>
             </FormControl>
           </Stack>

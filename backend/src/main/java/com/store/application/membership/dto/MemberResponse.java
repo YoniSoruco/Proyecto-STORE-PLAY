@@ -7,9 +7,9 @@ public record MemberResponse(
     Long userId,
     String email,
     String fullName,
+    String phoneNumber,
     UserRole role,
-    Long branchId,
-    String branchName,
+    java.util.Set<Long> branchIds,
     boolean active,
     String activationToken
 ) {}

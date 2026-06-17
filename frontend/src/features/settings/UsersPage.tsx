@@ -4,13 +4,14 @@ import {
   TableContainer, TableHead, TableRow, IconButton, 
   Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, FormControl, InputLabel, Select, MenuItem,
-  Chip, Avatar, CircularProgress, Tooltip
+  Chip, Avatar, CircularProgress, Tooltip, OutlinedInput
 } from '@mui/material';
 import PersonAdd from '@mui/icons-material/PersonAdd';
 import Delete from '@mui/icons-material/Delete';
 import Email from '@mui/icons-material/Email';
 import Badge from '@mui/icons-material/Badge';
 import Store from '@mui/icons-material/Store';
+import Phone from '@mui/icons-material/Phone';
 import apiClient from '@/api/client';
 import { type UserRole } from '@/features/auth/authSlice';
 
@@ -18,34 +19,45 @@ interface Member {
   id: number;
   email: string;
   fullName: string;
+  phoneNumber: string;
   role: UserRole;
-  branchId: number | null;
-  branchName: string;
+  branchIds: number[];
   active: boolean;
+}
+
+interface Branch {
+  id: number;
+  name: string;
 }
 
 export default function UsersPage() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenOpenDialog] = useState(false);
   
   // Form state
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [role, setRole] = useState<UserRole>('EMPLOYEE');
-  const [branchId, setBranchId] = useState<string>('');
+  const [branchIds, setBranchIds] = useState<number[]>([]);
 
   useEffect(() => {
-    loadMembers();
+    loadData();
   }, []);
 
-  const loadMembers = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get<Member[]>('/api/members');
-      setMembers(response.data);
+      const [membersRes, branchesRes] = await Promise.all([
+        apiClient.get<Member[]>('/api/members'),
+        apiClient.get<Branch[]>('/api/branches')
+      ]);
+      setMembers(membersRes.data);
+      setBranches(branchesRes.data);
     } catch (error) {
-      console.error('Error cargando miembros:', error);
+      console.error('Error cargando datos:', error);
     } finally {
       setLoading(false);
     }
@@ -56,12 +68,13 @@ export default function UsersPage() {
       await apiClient.post('/api/members', {
         email,
         fullName,
+        phoneNumber,
         role,
-        branchId: branchId ? Number(branchId) : null
+        branchIds
       });
       setOpenOpenDialog(false);
       resetForm();
-      loadMembers();
+      loadData();
     } catch (error) {
       console.error('Error agregando miembro:', error);
       alert('Error al invitar al usuario. Puede que ya sea miembro o los datos sean inválidos.');
@@ -72,7 +85,7 @@ export default function UsersPage() {
     if (!confirm('¿Estás seguro de que querés eliminar a este empleado?')) return;
     try {
       await apiClient.delete(`/api/members/${id}`);
-      loadMembers();
+      loadData();
     } catch (error) {
       console.error('Error eliminando miembro:', error);
     }
@@ -81,8 +94,9 @@ export default function UsersPage() {
   const resetForm = () => {
     setEmail('');
     setFullName('');
+    setPhoneNumber('');
     setRole('EMPLOYEE');
-    setBranchId('');
+    setBranchIds([]);
   };
 
   const getRoleColor = (role: UserRole) => {
@@ -92,6 +106,11 @@ export default function UsersPage() {
       case 'ADMIN': return 'info';
       default: return 'success';
     }
+  };
+
+  const getBranchNames = (ids: number[]) => {
+    if (!ids || ids.length === 0) return 'Todas';
+    return ids.map(id => branches.find(b => b.id === id)?.name || `Suc. ${id}`).join(', ');
   };
 
   return (
@@ -117,9 +136,9 @@ export default function UsersPage() {
             <TableHead sx={{ bgcolor: 'action.hover' }}>
               <TableRow>
                 <TableCell>Empleado</TableCell>
-                <TableCell>Email</TableCell>
+                <TableCell>Email / Tel</TableCell>
                 <TableCell>Rol</TableCell>
-                <TableCell>Sucursal</TableCell>
+                <TableCell>Sucursales</TableCell>
                 <TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -137,9 +156,17 @@ export default function UsersPage() {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Email fontSize="inherit" color="action" />
-                      <Typography variant="body2">{member.email}</Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Email fontSize="inherit" color="action" />
+                        <Typography variant="caption">{member.email}</Typography>
+                      </Box>
+                      {member.phoneNumber && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Phone fontSize="inherit" color="action" />
+                          <Typography variant="caption">{member.phoneNumber}</Typography>
+                        </Box>
+                      )}
                     </Box>
                   </TableCell>
                   <TableCell>
@@ -154,7 +181,7 @@ export default function UsersPage() {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Store fontSize="inherit" color="action" />
-                      <Typography variant="body2">{member.branchName}</Typography>
+                      <Typography variant="body2">{getBranchNames(member.branchIds)}</Typography>
                     </Box>
                   </TableCell>
                   <TableCell align="right">
@@ -163,7 +190,7 @@ export default function UsersPage() {
                         size="small" 
                         color="error" 
                         onClick={() => handleDeleteMember(member.id)}
-                        disabled={member.role === 'OWNER'} // No dejar que se auto-eliminen o eliminen dueños por ahora
+                        disabled={member.role === 'OWNER'} 
                       >
                         <Delete fontSize="small" />
                       </IconButton>
@@ -171,15 +198,6 @@ export default function UsersPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {members.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    <Typography variant="body2" sx={{ py: 3 }} color="textSecondary">
-                      No hay empleados registrados en este negocio.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -197,11 +215,7 @@ export default function UsersPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ejemplo@correo.com"
-              slotProps={{
-                input: {
-                  startAdornment: <Email sx={{ mr: 1, color: 'action.active' }} />
-                }
-              }}
+              slotProps={{ input: { startAdornment: <Email sx={{ mr: 1, color: 'action.active' }} /> } }}
             />
             <TextField
               label="Nombre Completo"
@@ -210,11 +224,16 @@ export default function UsersPage() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Nombre del empleado"
-              slotProps={{
-                input: {
-                  startAdornment: <Badge sx={{ mr: 1, color: 'action.active' }} />
-                }
-              }}
+              slotProps={{ input: { startAdornment: <Badge sx={{ mr: 1, color: 'action.active' }} /> } }}
+            />
+            <TextField
+              label="Teléfono (WhatsApp)"
+              fullWidth
+              variant="outlined"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="+54 9 ..."
+              slotProps={{ input: { startAdornment: <Phone sx={{ mr: 1, color: 'action.active' }} /> } }}
             />
             <FormControl fullWidth>
               <InputLabel>Rol</InputLabel>
@@ -229,17 +248,32 @@ export default function UsersPage() {
               </Select>
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel>Sucursal</InputLabel>
+              <InputLabel>Sucursales</InputLabel>
               <Select
-                value={branchId}
-                label="Sucursal"
-                onChange={(e) => setBranchId(e.target.value)}
+                multiple
+                value={branchIds}
+                onChange={(e) => setBranchIds(typeof e.target.value === 'string' ? [] : e.target.value)}
+                input={<OutlinedInput label="Sucursales" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.length === 0 ? 'Todas' : selected.map((id) => (
+                      <Chip key={id} label={branches.find(b => b.id === id)?.name || id} size="small" />
+                    ))}
+                  </Box>
+                )}
               >
-                <MenuItem value="">Todas las sucursales</MenuItem>
-                <MenuItem value="1">Sucursal Central</MenuItem>
-                <MenuItem value="2">Sucursal Norte</MenuItem>
-                <MenuItem value="3">Sucursal Sur</MenuItem>
+                <MenuItem disabled value="">
+                  <em>Selecciona sucursales</em>
+                </MenuItem>
+                {branches.map((branch) => (
+                  <MenuItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </MenuItem>
+                ))}
               </Select>
+              <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5 }}>
+                Vacio = Acceso a todas las sucursales
+              </Typography>
             </FormControl>
           </Box>
         </DialogContent>

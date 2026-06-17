@@ -20,8 +20,10 @@ public class MembershipEntity {
     @Column(nullable = false)
     private UserRole role;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "membership_branches", joinColumns = @JoinColumn(name = "membership_id"), schema = "public")
     @Column(name = "branch_id")
-    private Long branchId;
+    private java.util.Set<Long> branchIds = new java.util.HashSet<>();
 
     @Column(name = "is_active", nullable = false)
     private boolean active;
@@ -34,8 +36,8 @@ public class MembershipEntity {
     public void setTenantId(String tenantId) { this.tenantId = tenantId; }
     public UserRole getRole() { return role; }
     public void setRole(UserRole role) { this.role = role; }
-    public Long getBranchId() { return branchId; }
-    public void setBranchId(Long branchId) { this.branchId = branchId; }
+    public java.util.Set<Long> getBranchIds() { return branchIds; }
+    public void setBranchIds(java.util.Set<Long> branchIds) { this.branchIds = branchIds; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
 }
