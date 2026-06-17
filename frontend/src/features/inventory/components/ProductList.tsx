@@ -19,7 +19,10 @@ const unitLabels: Record<string, string> = {
 const ProductList: React.FC<ProductListProps> = ({ onEdit }) => {
   const dispatch = useAppDispatch();
   const { products, loading, error } = useAppSelector((state) => state.inventory);
+  const { activeContext } = useAppSelector((state) => state.auth);
   const [search, setSearch] = useState('');
+
+  const isEmployee = activeContext?.role === 'EMPLOYEE';
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -76,7 +79,7 @@ const ProductList: React.FC<ProductListProps> = ({ onEdit }) => {
                 <TableCell>Unidad</TableCell>
                 <TableCell>Vencimiento</TableCell>
                 <TableCell>Activo</TableCell>
-                <TableCell>Acciones</TableCell>
+                {!isEmployee && <TableCell>Acciones</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -108,14 +111,16 @@ const ProductList: React.FC<ProductListProps> = ({ onEdit }) => {
                     <Chip label={product.active ? 'Sí' : 'No'} size="small"
                       color={product.active ? 'success' : 'default'} variant="outlined" />
                   </TableCell>
-                  <TableCell>
-                    <IconButton size="small" onClick={() => onEdit?.(product)}>
-                      <Edit fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(product)}>
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+                  {!isEmployee && (
+                    <TableCell>
+                      <IconButton size="small" onClick={() => onEdit?.(product)}>
+                        <Edit fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDelete(product)}>
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

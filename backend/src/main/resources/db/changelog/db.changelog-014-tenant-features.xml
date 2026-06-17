@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="014-default-tenant-features" author="gemini">
+        <insert tableName="tenant_features" schemaName="public">
+            <column name="tenant_id" value="tenant1"/>
+            <column name="feature" value="POS"/>
+        </insert>
+        <insert tableName="tenant_features" schemaName="public">
+            <column name="tenant_id" value="tenant1"/>
+            <column name="feature" value="INVENTORY"/>
+        </insert>
+        <insert tableName="tenant_features" schemaName="public">
+            <column name="tenant_id" value="tenant1"/>
+            <column name="feature" value="REPORTS"/>
+        </insert>
+        <insert tableName="tenant_features" schemaName="public">
+            <column name="tenant_id" value="tenant1"/>
+            <column name="feature" value="BRANCHES"/>
+        </insert>
+
+        <insert tableName="tenant_features" schemaName="public">
+            <column name="tenant_id" value="tenant2"/>
+            <column name="feature" value="POS"/>
+        </insert>
+        <insert tableName="tenant_features" schemaName="public">
+            <column name="tenant_id" value="tenant2"/>
+            <column name="feature" value="INVENTORY"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

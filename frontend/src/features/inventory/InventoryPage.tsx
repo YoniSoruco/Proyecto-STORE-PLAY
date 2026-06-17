@@ -3,12 +3,13 @@ import { Container, Stack, Typography, Button } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import ProductList from './components/ProductList';
 import ProductDialog from './components/ProductDialog';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchCategories } from './inventorySlice';
 import type { Product } from '@/api/products';
 
 const InventoryPage: React.FC = () => {
   const dispatch = useAppDispatch();
+  const { activeContext } = useAppSelector((state) => state.auth);
   const [dialogProduct, setDialogProduct] = useState<Product | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -30,9 +31,11 @@ const InventoryPage: React.FC = () => {
     <Container sx={{ py: 4 }}>
       <Stack direction="row" sx={{ mb: 3, justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h4" component="h1">Gestión de Inventario</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={handleOpenAdd}>
-          Agregar Producto
-        </Button>
+        {activeContext?.role !== 'EMPLOYEE' && (
+          <Button variant="contained" startIcon={<Add />} onClick={handleOpenAdd}>
+            Agregar Producto
+          </Button>
+        )}
       </Stack>
       <ProductList onEdit={handleOpenEdit} />
       <ProductDialog
