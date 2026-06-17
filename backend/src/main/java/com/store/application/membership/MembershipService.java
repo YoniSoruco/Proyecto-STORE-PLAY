@@ -27,6 +27,7 @@ public class MembershipService {
     @Transactional
     public MemberResponse addMember(MemberRequest request) {
     String currentTenantId = com.store.domain.tenant.TenantContext.getTenant();
+    final StringBuilder activationToken = new StringBuilder();
 
     // 1. Buscar o crear el usuario en la tabla global (identidad)
     UserEntity user = userRepository.findByEmail(request.email())
@@ -34,9 +35,14 @@ public class MembershipService {
                 UserEntity newUser = new UserEntity();
                 newUser.setEmail(request.email());
                 newUser.setFullName(request.fullName());
-                newUser.setPassword("$2a$10$v7K6vM9.K7H8Y7W2vP.hM.Lz.Qy/1uE3Z5u6o/5/3m7N/P7h.1o9."); // temp123
+                // No seteamos password real, generamos token de activación
+                String token = java.util.UUID.randomUUID().toString();
+                newUser.setPassword("PENDING_ACTIVATION_" + java.util.UUID.randomUUID()); 
+                newUser.setResetToken(token);
+                newUser.setResetTokenExpiry(java.time.LocalDateTime.now().plusDays(7)); // 7 días para activar
                 newUser.setActive(true);
                 newUser.setSystemAdmin(false);
+                activationToken.append(token);
                 return userRepository.save(newUser);
             });
 
@@ -55,7 +61,7 @@ public class MembershipService {
     membership.setBranchId(request.branchId());
     membership.setActive(true);
 
-    return mapToResponse(membershipRepository.save(membership));
+    return mapToResponse(membershipRepository.save(membership), activationToken.toString());
 }
 
     @Transactional(readOnly = true)
@@ -63,7 +69,7 @@ public class MembershipService {
         String currentTenantId = com.store.domain.tenant.TenantContext.getTenant();
         return membershipRepository.findAll().stream()
                 .filter(m -> m.getTenantId().equals(currentTenantId))
-                .map(this::mapToResponse)
+                .map(m -> this.mapToResponse(m, null))
                 .toList();
     }
 
@@ -72,7 +78,7 @@ public class MembershipService {
         membershipRepository.deleteById(id);
     }
 
-    private MemberResponse mapToResponse(MembershipEntity membership) {
+    private MemberResponse mapToResponse(MembershipEntity membership, String token) {
         UserEntity user = userRepository.findById(membership.getUserId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado en tabla global"));
         
@@ -91,7 +97,8 @@ public class MembershipService {
                 membership.getRole(),
                 membership.getBranchId(),
                 branchName,
-                membership.isActive()
+                membership.isActive(),
+                token
         );
     }
 }

@@ -10,5 +10,6 @@ public record MemberResponse(
     UserRole role,
     Long branchId,
     String branchName,
-    boolean active
+    boolean active,
+    String activationToken
 ) {}
