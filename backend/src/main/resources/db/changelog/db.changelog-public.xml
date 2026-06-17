@@ -108,4 +108,5 @@
         </sql>
     </changeSet>
 
+    <include file="db/changelog/db.changelog-013-password-reset.xml"/>
 </databaseChangeLog>

@@ -24,6 +24,12 @@ public class UserEntity {
     @Column(name = "is_system_admin", nullable = false)
     private boolean systemAdmin;
 
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private java.time.LocalDateTime resetTokenExpiry;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getEmail() { return email; }
@@ -36,4 +42,8 @@ public class UserEntity {
     public void setActive(boolean active) { this.active = active; }
     public boolean isSystemAdmin() { return systemAdmin; }
     public void setSystemAdmin(boolean systemAdmin) { this.systemAdmin = systemAdmin; }
+    public String getResetToken() { return resetToken; }
+    public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+    public java.time.LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
+    public void setResetTokenExpiry(java.time.LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
 }

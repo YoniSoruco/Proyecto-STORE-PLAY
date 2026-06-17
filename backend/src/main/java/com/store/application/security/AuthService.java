@@ -90,6 +90,36 @@ public class AuthService {
         );
     }
 
+    @Transactional
+    public String requestPasswordReset(String email) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Si el email existe, se enviarán instrucciones de recuperación."));
+
+        String token = java.util.UUID.randomUUID().toString();
+        user.setResetToken(token);
+        user.setResetTokenExpiry(java.time.LocalDateTime.now().plusHours(2));
+        userRepository.save(user);
+
+        // TODO: Enviar email real aquí. Por ahora lo devolvemos para pruebas.
+        System.out.println("DEBUG: Reset Token para " + email + ": " + token);
+        return token;
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        UserEntity user = userRepository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Token inválido o expirado"));
+
+        if (user.getResetTokenExpiry().isBefore(java.time.LocalDateTime.now())) {
+            throw new RuntimeException("Token expirado");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
+    }
+
     private List<LoginResponse.TenantAccessDto> findMembershipsForTenant(Long userId, TenantEntity tenant) {
         return membershipRepository.findByUserIdAndTenantId(userId, tenant.getId()).stream()
                 .map(m -> new LoginResponse.TenantAccessDto(

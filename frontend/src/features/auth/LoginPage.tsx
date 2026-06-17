@@ -7,7 +7,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Login from '@mui/icons-material/Login';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/features/auth/authSlice';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
 export default function LoginPage() {
@@ -129,7 +129,15 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 3 }}>
+          <Box sx={{ mt: 2 }}>
+            <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
+              <Typography variant="body2" color="primary" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+                ¿Olvidaste tu contraseña?
+              </Typography>
+            </Link>
+          </Box>
+
+          <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
             ¿No tienes cuenta? Contacta con el administrador.
           </Typography>
         </Paper>

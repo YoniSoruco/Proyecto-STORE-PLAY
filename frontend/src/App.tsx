@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import LoginPage from '@/features/auth/LoginPage';
+import ForgotPasswordPage from '@/features/auth/ForgotPasswordPage';
 import SelectContextPage from '@/features/auth/SelectContextPage';
 import InventoryPage from '@/features/inventory/InventoryPage';
 import StockPage from '@/features/inventory/StockPage';
@@ -22,6 +23,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/select-context" element={<SelectContextPage />} />
       
       <Route path="/scan" element={
