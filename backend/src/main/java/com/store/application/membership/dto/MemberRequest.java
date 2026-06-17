@@ -7,5 +7,6 @@ public record MemberRequest(
     String fullName,
     String phoneNumber,
     UserRole role,
-    java.util.Set<Long> branchIds
+    java.util.Set<Long> branchIds,
+    java.util.Set<String> features
 ) {}

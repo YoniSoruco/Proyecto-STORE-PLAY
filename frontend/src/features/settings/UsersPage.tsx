@@ -14,6 +14,7 @@ import Store from '@mui/icons-material/Store';
 import Phone from '@mui/icons-material/Phone';
 import apiClient from '@/api/client';
 import { type UserRole } from '@/features/auth/authSlice';
+import { useAppSelector } from '@/store/hooks';
 
 interface Member {
   id: number;
@@ -22,6 +23,7 @@ interface Member {
   phoneNumber: string;
   role: UserRole;
   branchIds: number[];
+  features: string[];
   active: boolean;
 }
 
@@ -35,6 +37,13 @@ export default function UsersPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenOpenDialog] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
+  
+  const { user, activeContext } = useAppSelector((state) => state.auth);
+  const currentTenantAccess = user?.availableTenants.find(t => t.tenantId === activeContext?.tenantId);
+  const tenantFeatures = currentTenantAccess?.role === 'SUPERADMIN' || currentTenantAccess?.role === 'OWNER' 
+      ? (currentTenantAccess.features || ['POS', 'INVENTORY', 'REPORTS', 'BRANCHES']) 
+      : ['POS', 'INVENTORY']; // fallback
   
   // Form state
   const [email, setEmail] = useState('');
@@ -42,6 +51,7 @@ export default function UsersPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [role, setRole] = useState<UserRole>('EMPLOYEE');
   const [branchIds, setBranchIds] = useState<number[]>([]);
+  const [features, setFeatures] = useState<string[]>(['POS']);
 
   useEffect(() => {
     loadData();
@@ -63,21 +73,45 @@ export default function UsersPage() {
     }
   };
 
-  const handleAddMember = async () => {
+  const handleOpenAdd = () => {
+    resetForm();
+    setOpenOpenDialog(true);
+  };
+
+  const handleOpenEdit = (member: Member) => {
+    setEditingMemberId(member.id);
+    setEmail(member.email);
+    setFullName(member.fullName);
+    setPhoneNumber(member.phoneNumber || '');
+    setRole(member.role);
+    setBranchIds(member.branchIds || []);
+    setFeatures(member.features || []);
+    setOpenOpenDialog(true);
+  };
+
+  const handleSaveMember = async () => {
     try {
-      await apiClient.post('/api/members', {
+      const payload = {
         email,
         fullName,
         phoneNumber,
         role,
-        branchIds
-      });
+        branchIds,
+        features
+      };
+
+      if (editingMemberId) {
+        await apiClient.put(`/api/members/${editingMemberId}`, payload);
+      } else {
+        await apiClient.post('/api/members', payload);
+      }
+      
       setOpenOpenDialog(false);
       resetForm();
       loadData();
     } catch (error) {
-      console.error('Error agregando miembro:', error);
-      alert('Error al invitar al usuario. Puede que ya sea miembro o los datos sean inválidos.');
+      console.error('Error guardando miembro:', error);
+      alert('Error al guardar el usuario. Puede que los datos sean inválidos.');
     }
   };
 
@@ -92,11 +126,13 @@ export default function UsersPage() {
   };
 
   const resetForm = () => {
+    setEditingMemberId(null);
     setEmail('');
     setFullName('');
     setPhoneNumber('');
     setRole('EMPLOYEE');
     setBranchIds([]);
+    setFeatures(['POS']);
   };
 
   const getRoleColor = (role: UserRole) => {
@@ -185,6 +221,15 @@ export default function UsersPage() {
                     </Box>
                   </TableCell>
                   <TableCell align="right">
+                    <Tooltip title="Editar accesos">
+                      <IconButton 
+                        size="small" 
+                        color="primary" 
+                        onClick={() => handleOpenEdit(member)}
+                      >
+                        <Store fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="Eliminar acceso">
                       <IconButton 
                         size="small" 
@@ -203,9 +248,11 @@ export default function UsersPage() {
         </TableContainer>
       )}
 
-      {/* Dialogo de Invitación */}
+      {/* Dialogo de Invitación / Edición */}
       <Dialog open={openDialog} onClose={() => setOpenOpenDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 'bold' }}>Invitar nuevo miembro</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>
+          {editingMemberId ? 'Editar Accesos' : 'Invitar nuevo miembro'}
+        </DialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
@@ -214,6 +261,7 @@ export default function UsersPage() {
               variant="outlined"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={!!editingMemberId}
               placeholder="ejemplo@correo.com"
               slotProps={{ input: { startAdornment: <Email sx={{ mr: 1, color: 'action.active' }} /> } }}
             />
@@ -223,6 +271,7 @@ export default function UsersPage() {
               variant="outlined"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              disabled={!!editingMemberId}
               placeholder="Nombre del empleado"
               slotProps={{ input: { startAdornment: <Badge sx={{ mr: 1, color: 'action.active' }} /> } }}
             />
@@ -232,6 +281,7 @@ export default function UsersPage() {
               variant="outlined"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
+              disabled={!!editingMemberId}
               placeholder="+54 9 ..."
               slotProps={{ input: { startAdornment: <Phone sx={{ mr: 1, color: 'action.active' }} /> } }}
             />
@@ -252,19 +302,16 @@ export default function UsersPage() {
               <Select
                 multiple
                 value={branchIds}
-                onChange={(e) => setBranchIds(typeof e.target.value === 'string' ? [] : e.target.value)}
+                onChange={(e) => setBranchIds(typeof e.target.value === 'string' ? [] : e.target.value as number[])}
                 input={<OutlinedInput label="Sucursales" />}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.length === 0 ? 'Todas' : selected.map((id) => (
-                      <Chip key={id} label={branches.find(b => b.id === id)?.name || id} size="small" />
+                    {selected.length === 0 ? <Chip label="Todas" size="small" /> : selected.map((id) => (
+                      <Chip key={id} label={branches.find(b => b.id === id)?.name || `Suc. ${id}`} size="small" />
                     ))}
                   </Box>
                 )}
               >
-                <MenuItem disabled value="">
-                  <em>Selecciona sucursales</em>
-                </MenuItem>
                 {branches.map((branch) => (
                   <MenuItem key={branch.id} value={branch.id}>
                     {branch.name}
@@ -275,16 +322,38 @@ export default function UsersPage() {
                 Vacio = Acceso a todas las sucursales
               </Typography>
             </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Módulos Permitidos</InputLabel>
+              <Select
+                multiple
+                value={features}
+                onChange={(e) => setFeatures(typeof e.target.value === 'string' ? [] : e.target.value as string[])}
+                input={<OutlinedInput label="Módulos Permitidos" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((f) => (
+                      <Chip key={f} label={f} size="small" color="primary" variant="outlined" />
+                    ))}
+                  </Box>
+                )}
+              >
+                {tenantFeatures.map((f) => (
+                  <MenuItem key={f} value={f}>
+                    {f}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setOpenOpenDialog(false)}>Cancelar</Button>
           <Button 
             variant="contained" 
-            onClick={handleAddMember}
+            onClick={handleSaveMember}
             disabled={!email || !fullName}
           >
-            Vincular Usuario
+            {editingMemberId ? 'Guardar Cambios' : 'Vincular Usuario'}
           </Button>
         </DialogActions>
       </Dialog>

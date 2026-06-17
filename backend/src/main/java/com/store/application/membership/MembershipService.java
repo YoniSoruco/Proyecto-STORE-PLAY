@@ -61,9 +61,22 @@ public class MembershipService {
         membership.setTenantId(currentTenantId);
         membership.setRole(request.role());
         membership.setBranchIds(request.branchIds() != null ? request.branchIds() : new HashSet<>());
+        membership.setFeatures(request.features() != null ? request.features() : new HashSet<>());
         membership.setActive(true);
 
         return mapToResponse(membershipRepository.save(membership), activationToken.toString());
+    }
+
+    @Transactional
+    public MemberResponse updateMember(Long id, MemberRequest request) {
+        MembershipEntity membership = membershipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Membresía no encontrada"));
+        
+        membership.setRole(request.role());
+        membership.setBranchIds(request.branchIds() != null ? request.branchIds() : new HashSet<>());
+        membership.setFeatures(request.features() != null ? request.features() : new HashSet<>());
+        
+        return mapToResponse(membershipRepository.save(membership), null);
     }
 
     @Transactional(readOnly = true)
@@ -92,6 +105,7 @@ public class MembershipService {
                 user.getPhoneNumber(),
                 membership.getRole(),
                 membership.getBranchIds(),
+                membership.getFeatures(),
                 membership.isActive(),
                 token
         );

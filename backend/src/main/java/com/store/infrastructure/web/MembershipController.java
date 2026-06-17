@@ -28,6 +28,11 @@ public class MembershipController {
         return membershipService.addMember(request);
     }
 
+    @PutMapping("/{id}")
+    public MemberResponse updateMember(@PathVariable Long id, @RequestBody MemberRequest request) {
+        return membershipService.updateMember(id, request);
+    }
+
     @DeleteMapping("/{id}")
     public void removeMember(@PathVariable Long id) {
         membershipService.removeMember(id);

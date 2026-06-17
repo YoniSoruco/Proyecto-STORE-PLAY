@@ -122,9 +122,15 @@ public class AuthService {
 
     private List<LoginResponse.TenantAccessDto> findMembershipsForTenant(Long userId, TenantEntity tenant) {
         return membershipRepository.findByUserIdAndTenantId(userId, tenant.getId()).stream()
-                .map(m -> new LoginResponse.TenantAccessDto(
+                .map(m -> {
+                    List<String> grantedFeatures = (m.getRole() == UserRole.OWNER || m.getRole() == UserRole.SUPERADMIN)
+                            ? tenant.getFeatures()
+                            : new ArrayList<>(m.getFeatures());
+
+                    return new LoginResponse.TenantAccessDto(
                         tenant.getId(), tenant.getName(), tenant.getVerticalType(), tenant.getPrimaryColor(),
-                        m.getRole(), m.getBranchIds(), tenant.getFeatures()
-                )).toList();
+                        m.getRole(), m.getBranchIds(), grantedFeatures
+                    );
+                }).toList();
     }
 }

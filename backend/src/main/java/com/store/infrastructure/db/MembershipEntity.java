@@ -25,6 +25,11 @@ public class MembershipEntity {
     @Column(name = "branch_id")
     private java.util.Set<Long> branchIds = new java.util.HashSet<>();
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "membership_features", joinColumns = @JoinColumn(name = "membership_id"), schema = "public")
+    @Column(name = "feature")
+    private java.util.Set<String> features = new java.util.HashSet<>();
+
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
@@ -38,6 +43,8 @@ public class MembershipEntity {
     public void setRole(UserRole role) { this.role = role; }
     public java.util.Set<Long> getBranchIds() { return branchIds; }
     public void setBranchIds(java.util.Set<Long> branchIds) { this.branchIds = branchIds; }
+    public java.util.Set<String> getFeatures() { return features; }
+    public void setFeatures(java.util.Set<String> features) { this.features = features; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
 }

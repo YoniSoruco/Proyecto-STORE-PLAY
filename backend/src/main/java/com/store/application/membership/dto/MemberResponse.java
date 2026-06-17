@@ -10,6 +10,7 @@ public record MemberResponse(
     String phoneNumber,
     UserRole role,
     java.util.Set<Long> branchIds,
+    java.util.Set<String> features,
     boolean active,
     String activationToken
 ) {}
